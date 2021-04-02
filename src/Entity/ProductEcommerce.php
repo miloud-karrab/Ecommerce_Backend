@@ -3,13 +3,20 @@
 namespace App\Entity;
 
 use ApiPlatform\Core\Annotation\ApiResource;
-use App\Repository\ProductEcommerceRepository;
+use ApiPlatform\Core\Annotation\ApiProperty;
+use App\Repository\ProductRepository;
+use DateTime;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\HttpFoundation\File\File;
+use Vich\UploaderBundle\Mapping\Annotation as Vich;
+use ApiPlatform\Core\Bridge\Doctrine\Orm\Filter\RangeFilter;
+use ApiPlatform\Core\Annotation\ApiFilter;
 
 /**
  * @ApiResource(formats={"json"})
+ * @Vich\Uploadable
  * @ORM\Entity(repositoryClass=ProductEcommerceRepository::class)
  */
 class ProductEcommerce
@@ -52,16 +59,16 @@ class ProductEcommerce
     private $Marque;
 
     /**
-     * @ORM\Column(type="blob")
+     * *@ORM\OneToMany(targetEntity=ProductImage::class, mappedBy="productecommerce")
+     *  @ApiProperty(iri="http://schema.org/image")
      */
-    private $Image;
+    private $image;
 
     /**
      * @ORM\ManyToOne(targetEntity=Category::class, inversedBy="productEcommerces")
      * @ORM\JoinColumn(nullable=false)
      */
     private $category;
-
     /**
      * @ORM\OneToMany(targetEntity=Promotion::class, mappedBy="productecommerce")
      */
@@ -79,6 +86,7 @@ class ProductEcommerce
 
     public function __construct()
     {
+        $this->image = new ArrayCollection();
         $this->promotions = new ArrayCollection();
         $this->orders = new ArrayCollection();
         $this->availabilityplace = new ArrayCollection();
@@ -160,11 +168,14 @@ class ProductEcommerce
 
         return $this;
     }
-
-    public function getImage()
+    /**
+     * @return Collection|ProductImage[]
+     */
+    public function getImage(): Collection
     {
-        return $this->Image;
+        return $this->image;
     }
+
 
     public function setImage($Image): self
     {
@@ -192,7 +203,27 @@ class ProductEcommerce
     {
         return $this->promotions;
     }
+    public function addImage(ProductImage $image): self
+    {
+        if (!$this->image->contains($image)) {
+            $this->image[] = $image;
+            $image->setProduct($this);
+        }
 
+        return $this;
+    }
+
+    public function removeImage(ProductImage $image): self
+    {
+        if ($this->image->removeElement($image)) {
+            // set the owning side to null (unless already changed)
+            if ($image->getProduct() === $this) {
+                $image->setProduct(null);
+            }
+        }
+
+        return $this;
+    }
     public function addPromotion(Promotion $promotion): self
     {
         if (!$this->promotions->contains($promotion)) {
